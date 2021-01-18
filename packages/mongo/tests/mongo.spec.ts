@@ -5,6 +5,9 @@ import bson from 'bson';
 import {getInstanceState} from '@deepkit/orm';
 import {SimpleModel, SuperSimple} from './entities';
 import {createDatabase} from './utils';
+import { sleep } from '@deepkit/core';
+
+Error.stackTraceLimit = Infinity;
 
 test('test save undefined values', async () => {
     const session = await createDatabase('test save undefined values');
@@ -38,7 +41,88 @@ test('test save undefined values', async () => {
     // }
 });
 
-test('test save model', async () => {
+test('query patch', async () => {
+    const db = await createDatabase('testing');
+    const session = db.createSession();
+
+    const item = new SimpleModel('foo');
+    await db.persist(item);
+
+    const dbItem = await db.query(SimpleModel).filter({name: 'foo'}).findOne();
+    expect(dbItem).not.toBe(item);
+
+    const patched = await db.query(SimpleModel).filter({name: 'foo'}).patchOne({name: 'bar'});
+    expect(patched.modified).toBe(1);
+    expect(await db.query(SimpleModel).filter({name: 'foo'}).has()).toBe(false);
+    expect(await db.query(SimpleModel).filter({name: 'bar'}).has()).toBe(true);
+});
+
+test('query filter with undefined filter', async () => {
+    const db = await createDatabase('testing');
+
+    const item1 = new SuperSimple();
+    const item2 = new SuperSimple();
+    item2.name = 'foo';
+
+    await db.persist(item1, item2);
+
+    {
+        const items = await db.query(SuperSimple).find();
+        expect(items.length).toBe(2);
+        expect(await db.query(SuperSimple).has()).toBe(true);
+    }
+
+    {
+        const items = await db.query(SuperSimple).filter({name: undefined}).find();
+        expect(items.length).toBe(1); //only one item has name: undefined
+        expect(await db.query(SuperSimple).filter({name: undefined}).count()).toBe(1); //only one item has name: undefined
+        expect(await db.query(SuperSimple).filter({name: undefined}).has()).toBe(true);
+    }
+
+    {
+        await db.query(SuperSimple).patchMany({name: undefined});
+        expect(await db.query(SuperSimple).filter({name: undefined}).count()).toBe(2);
+    }
+});
+
+test('uof sets undefined for optional field', async () => {
+    const db = await createDatabase('testing');
+
+    const item1 = new SuperSimple();
+    item1.name = 'foo';
+
+    await db.persist(item1);
+
+    expect(await db.query(SuperSimple).filter({name: undefined}).count()).toBe(0);
+
+    {
+        const session = db.createSession();
+        const item = await session.query(SuperSimple).findOne();
+        expect(item.name).toBe('foo');
+
+        item.name = undefined;
+        await session.commit();
+
+        expect(await db.query(SuperSimple).filter({name: undefined}).count()).toBe(1);
+    }
+});
+
+test('uow patch', async () => {
+    const db = await createDatabase('testing');
+    const session = db.createSession();
+
+    const item = new SimpleModel('foo');
+    session.add(item);
+    await session.commit();
+
+    item.name = 'bar';
+    await session.commit();
+
+    expect(await db.query(SimpleModel).filter({name: 'foo'}).has()).toBe(false);
+    expect(await db.query(SimpleModel).filter({name: 'bar'}).has()).toBe(true);
+});
+
+test('save model', async () => {
     const db = await createDatabase('testing');
     const session = db.createSession();
 
@@ -410,8 +494,6 @@ test('references back', async () => {
         expect(plain.name).toBe('marc');
         expect(plain.images).toBeUndefined();
     }
-
-    // {bb nbnn
 
     {
         const marcFromDb = await session.query(User).joinWith('images').filter({name: 'marc'}).findOne();

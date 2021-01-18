@@ -21,7 +21,7 @@ import bson from 'bson';
 import BSON from 'bson-ext';
 import { BenchSuite } from '../bench';
 import { t } from '@deepkit/type';
-import { getBSONDecoder, ParserV3, parseObject, ParserV2, BaseParser } from '@deepkit/bson';
+import { getBSONDecoder, parseObject, ParserV2, BaseParser } from '@deepkit/bson';
 const { deserialize, ObjectId, serialize } = bson;
 // buildStringIndex(Buffer.from('abcdefgh!'));
 // process.exit(1);
@@ -42,12 +42,12 @@ export async function main() {
         tags: ['a', 'b', 'c', 'a', 'b', 'c'],
         '™£': 3,
         priority: 'µ',
+        f: '2H₂ + O₂ ⇌ 2H₂O',
         sum: '∑',
         '😂': 2,
     };
     console.log('obj', obj);
     console.log('obj parsed generic v2', parseObject(new ParserV2(serialize(obj))));
-    console.log('obj parsed generic v3', parseObject(new ParserV3(serialize(obj))));
     console.log('obj parsed JIT', getBSONDecoder(Obj)(serialize(obj)));
 
     const itemSchema = t.schema({
@@ -64,10 +64,10 @@ export async function main() {
         items.push({
             // _id: new ObjectId(),
             id: i,
-            name: 'Peter',
+            name: 'adsasnidan dahsd ahdiausdb iuad iuadsiu asdiua siudausid uasd iuasd iaudsb aisdb asidb aida sb uaisbd auisdb basdiu basd nasdo a dd aimd adsasnidan dahsd ahdiausdb iuad iuadsiu asdiua siudausid uasd iuasd iaudsb aisdb asidb aida sb uaisbd auisdb basdiu basd nasdo a dd aimd adsasnidan dahsd ahdiausdb iuad iuadsiu asdiua siudausid uasd iuasd iaudsb aisdb asidb aida sb uaisbd auisdb basdiu basd nasdo a dd aimd ',
             ready: true,
             priority: 0,
-            tags: ['a', 'b', 'c'],
+            tags: ['addasadadadsa', 'adasdasdadadb', 'casdasdasdsadsaddasdsdasd'],
         });
     }
 
@@ -83,7 +83,6 @@ export async function main() {
 
     const parser = getBSONDecoder(schema);
     parser(bson);
-    parseObject(new ParserV3(bson));
 
     suite.add('_deepkit/bson JS JIT', () => {
         const items = parser(bson);
@@ -95,10 +94,6 @@ export async function main() {
 
     suite.add('_deepkit/bson JS generic ParserV2', () => {
         const items = parseObject(new ParserV2(bson));
-    });
-
-    suite.add('_deepkit/bson JS generic ParserV3', () => {
-        const items = parseObject(new ParserV3(bson));
     });
 
     suite.add('official js-bson parser', () => {

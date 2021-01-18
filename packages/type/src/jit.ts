@@ -277,21 +277,31 @@ export function createClassToXFunction<T>(schema: ClassSchema<T>, serializer: Se
         const convertProperties: string[] = [];
 
         for (const property of schema.getClassProperties().values()) {
-            if (property.isParentReference) {
-                //we do not export parent references, as this would lead to an circular reference
-                continue;
-            }
+            if (property.isParentReference) continue; //we do not export parent references, as this would lead to an circular reference
+            if (isExcluded(schema, property.name, serializer.name)) continue;
 
             if (property.backReference) continue;
 
-            if (isExcluded(schema, property.name, serializer.name)) {
-                continue;
+            let setDefault = '';
+            if (property.hasManualDefaultValue() || property.type === 'literal') {
+                if (property.defaultValue !== undefined) {
+                    const defaultValue = reserveVariable(context, 'defaultValue', property.defaultValue);
+                    setDefault = `_data.${property.name} = ${defaultValue}();`;
+                } else if (property.type === 'literal' && !property.isOptional) {
+                    setDefault = `_data.${property.name} = ${JSON.stringify(property.literalValue)};`;
+                }
+            } else if (property.isNullable) {
+                setDefault = `_data.${property.name} = null;`;
             }
 
             convertProperties.push(`
             //${property.name}:${property.type}
-            if (!_options || isGroupAllowed(_options, ${JSON.stringify(property.groupNames)})){ 
-                ${getDataConverterJS(`_data.${property.name}`, `_instance.${property.name}`, property, serializer.fromClass, context, jitStack)}
+            if (!_options || isGroupAllowed(_options, ${JSON.stringify(property.groupNames)})){
+                if (${JSON.stringify(property.name)} in _instance) {
+                    ${getDataConverterJS(`_data.${property.name}`, `_instance.${property.name}`, property, serializer.fromClass, context, jitStack)}
+                } else {
+                    ${setDefault}
+                }
             }
         `);
         }
@@ -301,7 +311,9 @@ export function createClassToXFunction<T>(schema: ClassSchema<T>, serializer: Se
             var _data = {};
             var _oldUnpopulatedCheck = _global.unpopulatedCheck;
             _global.unpopulatedCheck = UnpopulatedCheckNone;
+    
             ${convertProperties.join('\n')}
+
             _global.unpopulatedCheck = _oldUnpopulatedCheck;
             return _data;
         }
@@ -431,12 +443,30 @@ export function createXToClassFunction<T>(schema: ClassSchema<T>, serializer: Se
         if (assignedViaConstructor[property.name]) continue;
         if (property.isReference || property.backReference) continue;
 
+        if (isExcluded(schema, property.name, serializer.name)) continue;
+
         if (property.isParentReference) {
             setProperties.push(getParentResolverJS(schema, `_instance.${property.name}`, property, context));
         } else {
+            let setDefault = '';
+            if (property.hasManualDefaultValue() || property.type === 'literal') {
+                if (property.defaultValue !== undefined) {
+                    const defaultValue = reserveVariable(context, 'defaultValue', property.defaultValue);
+                    setDefault = `_instance.${property.name} = ${defaultValue}();`;
+                } else if (property.type === 'literal' && !property.isOptional) {
+                    setDefault = `_instance.${property.name} = ${JSON.stringify(property.literalValue)};`;
+                }
+            } else if (property.isNullable) {
+                setDefault = `_instance.${property.name} = null;`;
+            }
+
             setProperties.push(`
             if (!_options || isGroupAllowed(_options, ${JSON.stringify(property.groupNames)})) {
-                ${getDataConverterJS(`_instance.${property.name}`, `_data.${property.name}`, property, serializer.toClass, context, jitStack)}
+                if (${JSON.stringify(property.name)} in _data) {
+                    ${getDataConverterJS(`_instance.${property.name}`, `_data.${property.name}`, property, serializer.toClass, context, jitStack)}
+                } else {
+                    ${setDefault}
+                }
             }
             `);
         }

@@ -69,9 +69,7 @@ export class BaseParser {
                 return this.parseBinary(property);
             case BSONType.REGEXP:
                 const source = this.eatString(this.stringSize());
-                this.offset++; //null
                 const options = this.eatString(this.stringSize());
-                this.offset++; //null
                 return new RegExp(source, options.replace('s', 'g'));
             case BSONType.OBJECT:
                 return parseObject(this);
@@ -193,9 +191,13 @@ export class BaseParser {
         return this.dataView.getUint32(this.offset, true);
     }
 
+    /**
+     * Returns the size including \0.
+     */
     stringSize(): number {
         let end = this.offset;
         while (this.buffer[end] !== 0) end++;
+        end++; //null
         return end - this.offset;
     }
 
@@ -230,6 +232,9 @@ export class BaseParser {
         return this.dataView.getFloat64(this.offset - 8, true);
     }
 
+    /**
+     * Size includes the \0. If not existend, increase by 1.
+     */
     eatString(size: number): string {
         this.offset += size;
         return decodeUTF8(this.buffer, this.offset - size, this.offset - 1);

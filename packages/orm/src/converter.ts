@@ -8,7 +8,18 @@
  * You should have received a copy of the MIT License along with this program.
  */
 
-import { ClassSchema, getDataConverterJS, getGlobalStore, JitStack, jsonSerializer, PropertySchema, Serializer, SerializerCompilers, UnpopulatedCheck } from '@deepkit/type';
+import {
+    ClassSchema,
+    getDataConverterJS,
+    getGlobalStore,
+    isExcluded,
+    JitStack,
+    jsonSerializer,
+    PropertySchema,
+    Serializer,
+    SerializerCompilers,
+    UnpopulatedCheck
+} from '@deepkit/type';
 import { toFastProperties } from '@deepkit/core';
 
 function createJITConverterForSnapshot(
@@ -22,6 +33,8 @@ function createJITConverterForSnapshot(
 
     for (const property of properties) {
         if (property.isParentReference) continue;
+
+        if (isExcluded(classSchema, property.name, 'json')) continue;
 
         if (property.isReference) {
             const referenceCode: string[] = [];

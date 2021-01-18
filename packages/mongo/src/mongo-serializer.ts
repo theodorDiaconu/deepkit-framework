@@ -26,7 +26,7 @@ export function uuid4Binary(u?: string): any {
     return mongoUuid(bson.Binary, u);
 }
 
-export const mongoSerializer = new class extends jsonSerializer.fork('sql') {
+export const mongoSerializer = new class extends jsonSerializer.fork('mongo') {
 };
 
 mongoSerializer.fromClass.register('string', compilerToString);

@@ -121,7 +121,22 @@ jsonSerializer.toClass.prepend('undefined', (property, state: CompilerState) => 
     return;
 });
 
+jsonSerializer.fromClass.prepend('undefined', (property, state: CompilerState) => {
+    if (property.type === 'literal' && !property.isOptional) {
+        const literalValue = state.setVariable('_literal_value_' + property.name, property.literalValue);
+        state.addSetter(literalValue);
+    }
+    return;
+});
+
 jsonSerializer.toClass.prepend('null', (property: PropertySchema, state: CompilerState) => {
+    if (property.type === 'literal' && !property.isNullable) {
+        const literalValue = state.setVariable('_literal_value_' + property.name, property.literalValue);
+        state.addSetter(literalValue);
+    }
+});
+
+jsonSerializer.fromClass.prepend('null', (property: PropertySchema, state: CompilerState) => {
     if (property.type === 'literal' && !property.isNullable) {
         const literalValue = state.setVariable('_literal_value_' + property.name, property.literalValue);
         state.addSetter(literalValue);
@@ -308,7 +323,7 @@ jsonSerializer.toClass.register('union', (property: PropertySchema, state) => {
         elseBranch = `${state.setter} = null;`;
     } else if (property.hasManualDefaultValue()) {
         const defaultVar = state.setVariable('default', property.defaultValue);
-        elseBranch = `${state.setter} = ${defaultVar};`;
+        elseBranch = `${state.setter} = ${defaultVar}();`;
     }
 
     for (const unionType of getSortedUnionTypes(property, jsonTypeGuards)) {
@@ -344,7 +359,7 @@ jsonSerializer.fromClass.register('union', (property: PropertySchema, state) => 
         elseBranch = `${state.setter} = null;`;
     } else if (property.hasManualDefaultValue()) {
         const defaultVar = state.setVariable('default', property.defaultValue);
-        elseBranch = `${state.setter} = ${defaultVar};`;
+        elseBranch = `${state.setter} = ${defaultVar}();`;
     }
 
     for (const unionType of getSortedUnionTypes(property, jsonTypeGuards)) {

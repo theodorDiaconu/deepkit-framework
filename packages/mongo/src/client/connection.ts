@@ -21,7 +21,7 @@ import { Host } from './host';
 import { createConnection, Socket } from 'net';
 import { connect as createTLSConnection, TLSSocket } from 'tls';
 import { Command } from './command/command';
-import { ClassSchema } from '@deepkit/type';
+import { ClassSchema, getClassSchema } from '@deepkit/type';
 import { getBSONSerializer, getBSONSizer, Writer } from '@deepkit/bson';
 import { HandshakeCommand } from './command/handshake';
 import { MongoClientConfig } from './client';
@@ -330,6 +330,7 @@ export class MongoConnection {
         // writer.writeInt32(0); //skip, 4
         // writer.writeInt32(1); //return, 4
 
+        try {
         const section = messageSerializer(message);
         // const section = serialize(message);
         writer.writeBuffer(section);
@@ -340,6 +341,10 @@ export class MongoConnection {
 
         //detect backPressure
         this.socket.write(buffer);
+        } catch (error) {
+            console.log('failed sending message', message, 'using schema', schema ? getClassSchema(schema).toString() : 'no-schema');
+            throw error;
+        }
     }
 
     async connect(): Promise<void> {

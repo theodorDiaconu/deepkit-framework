@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { getBSONDecoder, getBSONSerializer } from '@deepkit/bson';
 import { asyncOperation, toFastProperties } from '@deepkit/core';
 import { ClassSchema, createClassSchema, getClassSchema, propertyDefinition, PropertySchema, PropertySchemaSerialized, t } from '@deepkit/type';
 import { BehaviorSubject, Observable, Subject, Subscriber } from 'rxjs';
@@ -118,7 +119,7 @@ export class RpcActionClient {
                     args: argsObject
                 }, { peerId: controller.peerId }).onReply((reply) => {
                     try {
-                        // console.log('client: answer', RpcTypes[reply.type], reply.composite);
+                        console.log('client: answer', RpcTypes[reply.type], reply.composite);
 
                         if (reply.type === RpcTypes.ResponseActionResult) {
                             const bodies = reply.getBodies();
@@ -130,6 +131,7 @@ export class RpcActionClient {
                             } else {
                                 reply = bodies[0];
                             }
+                            console.log('ResponseActionResult replies', bodies.length, ', reply: ', RpcTypes[reply.type], reply.composite);
                         }
 
                         switch (reply.type) {
@@ -291,7 +293,7 @@ export class RpcActionClient {
                             }
 
                             default: {
-                                console.log(`Unexpected type received ${reply.type}`);
+                                console.log(`Unexpected type received ${reply.type} ${RpcTypes[reply.type]}`);
                             }
                         };
                     } catch (error) {
@@ -397,9 +399,10 @@ export class RpcActionClient {
 
                 const parameters: string[] = [];
                 const argsSchema = createClassSchema();
-                for (const property of parsed.parameters) {
-                    argsSchema.registerProperty(PropertySchema.fromJSON(property));
-                    parameters.push(property.name);
+                for (const propertyJson of parsed.parameters) {
+                    const property = PropertySchema.fromJSON(propertyJson);
+                    argsSchema.registerProperty(property);
+                    parameters.push(propertyJson.name);
                 }
 
                 const resultProperty = PropertySchema.fromJSON(parsed.result);
@@ -418,7 +421,7 @@ export class RpcActionClient {
 
                 state.types = {
                     parameters: parameters,
-                    parameterSchema: rpcAction.extend({ args: t.type(argsSchema) }),
+                    parameterSchema: rpcAction.extend({ args: argsSchema }),
                     resultProperty,
                     resultSchema,
                     observableNextSchema,

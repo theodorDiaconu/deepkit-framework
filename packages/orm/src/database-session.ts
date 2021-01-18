@@ -381,15 +381,15 @@ export class DatabaseSession<ADAPTER extends DatabaseAdapter> {
             const round = this.rounds[i];
             if (round.isCommitted() || round.isInCommit()) continue;
 
-            try {
+            // try {
                 await round.commit(this.currentPersistence);
-            } catch (error) {
-                this.rounds = [];
-                this.commitDepth = 0;
-                this.currentPersistence.release();
-                this.currentPersistence = undefined;
-                throw error;
-            }
+            // } catch (error) {
+            //     this.rounds = [];
+            //     this.commitDepth = 0;
+            //     this.currentPersistence.release();
+            //     this.currentPersistence = undefined;
+            //     throw error;
+            // }
         }
 
         if (this.commitDepth - 1 === 0) {

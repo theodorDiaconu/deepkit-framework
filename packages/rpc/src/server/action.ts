@@ -280,7 +280,7 @@ export class RpcServerAction {
         }
 
         try {
-            const result = await controller[body.method](...Object.values(converted));
+            const result = await controller[body.method](...Object.values(value.args));
 
             if (isEntitySubject(result)) {
                 const newProperty = createNewPropertySchemaIfNecessary(result.value, types.resultProperty);
@@ -309,6 +309,7 @@ export class RpcServerAction {
 
                 types.resultPropertyChanged++;
 
+                console.log('collection.all()', collection.all());
                 response.composite(RpcTypes.ResponseActionCollection)
                     .add(RpcTypes.ResponseActionReturnType, propertyDefinition, newProperty.toJSON())
                     .add(RpcTypes.ResponseActionCollectionModel, CollectionQueryModel, collection.model)

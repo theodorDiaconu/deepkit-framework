@@ -117,13 +117,17 @@ export class MongoPersistence extends DatabasePersistence {
                 }
             }
 
+            const u: any = {};
+            if (changeSet.changes.$set && !empty(changeSet.changes.$set)) {
+                u.$set = scopeSerializer.partialSerialize(changeSet.changes.$set);
+            }
+
+            if (changeSet.changes.$inc) u.$set = changeSet.changes.$inc;
+            if (changeSet.changes.$unset) u.$unset = changeSet.changes.$unset;
+
             updates.push({
                 q: convertClassQueryToMongo(classSchema.classType, changeSet.primaryKey as FilterQuery<T>),
-                u: {
-                    $set: !empty(changeSet.changes.$set) ? scopeSerializer.partialSerialize(changeSet.changes.$set!) : undefined,
-                    $inc: changeSet.changes.$inc,
-                    $unset: changeSet.changes.$unset,
-                },
+                u: u,
                 multi: false,
             });
         }
